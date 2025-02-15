@@ -1,25 +1,57 @@
 package cos418_hw1_1
 
 import (
-	"fmt"
+	"bufio"
+	"os"
+	"regexp"
 	"sort"
+	"strings"
+	"fmt"
 )
 
 // Find the top K most common words in a text document.
-// 	path: location of the document
-//	numWords: number of words to return (i.e. k)
-//	charThreshold: character threshold for whether a token qualifies as a word,
-//		e.g. charThreshold = 5 means "apple" is a word but "pear" is not.
-// Matching is case insensitive, e.g. "Orange" and "orange" is considered the same word.
-// A word comprises alphanumeric characters only. All punctuation and other characters
-// are removed, e.g. "don't" becomes "dont".
-// You should use `checkError` to handle potential errors.
 func topWords(path string, numWords int, charThreshold int) []WordCount {
-	// TODO: implement me
-	// HINT: You may find the `strings.Fields` and `strings.ToLower` functions helpful
-	// HINT: To keep only alphanumeric characters, use the regex "[^0-9a-zA-Z]+"
-	return nil
+	// Open the file
+	file, err := os.Open(path)
+	checkError(err)
+	defer file.Close()
+
+	// Regular expression to keep only alphanumeric characters
+	re := regexp.MustCompile(`[^0-9a-zA-Z]+`)
+
+	wordFreq := make(map[string]int)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		words := strings.Fields(line) // Split line into words
+		for _, word := range words {
+			// Convert to lowercase and remove non-alphanumeric characters
+			cleanWord := re.ReplaceAllString(strings.ToLower(word), "")
+			if len(cleanWord) >= charThreshold {
+				wordFreq[cleanWord]++
+			}
+		}
+	}
+
+	checkError(scanner.Err())
+
+	// Convert map to a slice of WordCount
+	wordCounts := make([]WordCount, 0, len(wordFreq))
+	for word, count := range wordFreq {
+		wordCounts = append(wordCounts, WordCount{Word: word, Count: count})
+	}
+
+	// Sort the words
+	sortWordCounts(wordCounts)
+
+	// Return the top numWords words
+	if numWords > len(wordCounts) {
+		numWords = len(wordCounts)
+	}
+	return wordCounts[:numWords]
 }
+
 
 // A struct that represents how many times a word is observed in a document
 type WordCount struct {
